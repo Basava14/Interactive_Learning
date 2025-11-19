@@ -56,11 +56,11 @@ export default function Home() {
     setError('');
     setUploadedImage(file);
     setImageName(file.name.replace(/\.[^/.]+$/, ''));
-    
+
     // Create preview URL
     const previewUrl = URL.createObjectURL(file);
     setImagePreviewUrl(previewUrl);
-    
+
     // Start 3D model generation
     setIsGeneratingModel(true);
     setUploadProgress(0);
@@ -68,7 +68,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -94,7 +94,7 @@ export default function Home() {
 
       const data: ConvertedModel = await response.json();
       setGeneratedModel(data);
-      
+
       // After successful 3D generation, generate summary automatically
       await generateSummary(file.name);
     } catch (err) {
@@ -223,7 +223,6 @@ export default function Home() {
         </div>
       </header>
 
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {!generatedModel ? (
@@ -231,11 +230,10 @@ export default function Home() {
           <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
             <div className="w-full max-w-2xl">
               <div
-                className={`relative border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-                  dragActive
+                className={`relative border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${dragActive
                     ? 'border-blue-500 bg-blue-50 scale-105'
                     : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50'
-                }`}
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -272,7 +270,7 @@ export default function Home() {
                     <p className="text-gray-600 mb-6">
                       Drag and drop your image here, or click to browse
                     </p>
-                    
+
                     <input
                       type="file"
                       accept="image/*"
@@ -281,7 +279,7 @@ export default function Home() {
                       id="file-input"
                       disabled={isGeneratingModel}
                     />
-                    
+
                     <label
                       htmlFor="file-input"
                       className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer font-medium"
@@ -331,87 +329,84 @@ export default function Home() {
           </div>
         ) : (
           /* Side-by-side Layout: 3D Viewer + Chat Panel */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ height: 'calc(100vh - 12rem)' }}>
-              {/* Left: 3D Viewer with Enhanced Design */}
-              <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-200/50 flex flex-col h-full overflow-hidden backdrop-blur-sm">
-                {/* Viewer Header with Gradient */}
-                <div className="px-6 py-5 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white flex-shrink-0 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="p-1.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg">
-                          <Box className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900">3D Model Viewer</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ height: 'calc(100vh - 12rem)' }}>
+            {/* Left: 3D Viewer with Enhanced Design */}
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-200/50 flex flex-col h-full overflow-hidden backdrop-blur-sm">
+              {/* Viewer Header with Gradient */}
+              <div className="px-6 py-5 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-white flex-shrink-0 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="p-1.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg">
+                        <Box className="w-5 h-5 text-white" />
                       </div>
-                      <p className="text-sm text-gray-600 font-medium ml-8">{imageName}</p>
+                      <h2 className="text-xl font-bold text-gray-900">3D Model Viewer</h2>
                     </div>
-                    <button
-                      onClick={handleDownloadModel}
-                      className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-                    >
-                      <Download className="w-4 h-4 group-hover:animate-bounce" />
-                      Download
-                    </button>
+                    <p className="text-sm text-gray-600 font-medium ml-8">{imageName}</p>
                   </div>
-
-                  {/* View Mode Selector with Modern Design */}
-                  <div className="flex gap-2 p-1.5 bg-gray-100/80 rounded-xl backdrop-blur-sm">
-                    <button
-                      onClick={() => setViewMode('3d-model')}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                        viewMode === '3d-model'
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
-                          : 'text-gray-700 hover:bg-white hover:shadow-md'
-                      }`}
-                    >
-                      3D Model
-                    </button>
-                    <button
-                      onClick={() => setViewMode('textured')}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                        viewMode === 'textured'
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
-                          : 'text-gray-700 hover:bg-white hover:shadow-md'
-                      }`}
-                    >
-                      Textured 3D
-                    </button>
-                    <button
-                      onClick={() => setViewMode('point-cloud')}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                        viewMode === 'point-cloud'
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
-                          : 'text-gray-700 hover:bg-white hover:shadow-md'
-                      }`}
-                    >
-                      Point Cloud
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleDownloadModel}
+                    className="group flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+                  >
+                    <Download className="w-4 h-4 group-hover:animate-bounce" />
+                    Download
+                  </button>
                 </div>
 
-                {/* 3D Viewer Canvas */}
-                <div className="flex-1 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-b-2xl overflow-hidden min-h-0 relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900/10 to-transparent pointer-events-none"></div>
-                  <ModelViewer
-                    modelUrl={generatedModel.model_url}
-                    depthMapUrl={generatedModel.depth_map_url}
-                    pointCloudUrl={generatedModel.point_cloud_url}
-                    viewMode={viewMode}
-                    imageName={imageName}
-                  />
+                {/* View Mode Selector with Modern Design */}
+                <div className="flex gap-2 p-1.5 bg-gray-100/80 rounded-xl backdrop-blur-sm">
+                  <button
+                    onClick={() => setViewMode('3d-model')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === '3d-model'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
+                        : 'text-gray-700 hover:bg-white hover:shadow-md'
+                      }`}
+                  >
+                    3D Model
+                  </button>
+                  <button
+                    onClick={() => setViewMode('textured')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === 'textured'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
+                        : 'text-gray-700 hover:bg-white hover:shadow-md'
+                      }`}
+                  >
+                    Textured 3D
+                  </button>
+                  <button
+                    onClick={() => setViewMode('point-cloud')}
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === 'point-cloud'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-105'
+                        : 'text-gray-700 hover:bg-white hover:shadow-md'
+                      }`}
+                  >
+                    Point Cloud
+                  </button>
                 </div>
               </div>
 
-              {/* Right: Chat Panel */}
-              <div className="h-full overflow-hidden">
-                <ChatPanel
+              {/* 3D Viewer Canvas */}
+              <div className="flex-1 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-b-2xl overflow-hidden min-h-0 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-900/10 to-transparent pointer-events-none"></div>
+                <ModelViewer
+                  modelUrl={generatedModel.model_url}
+                  depthMapUrl={generatedModel.depth_map_url}
+                  pointCloudUrl={generatedModel.point_cloud_url}
+                  viewMode={viewMode}
                   imageName={imageName}
-                  summary={summary}
-                  isGeneratingSummary={isGeneratingSummary}
                 />
               </div>
             </div>
+
+            {/* Right: Chat Panel */}
+            <div className="h-full overflow-hidden">
+              <ChatPanel
+                imageName={imageName}
+                summary={summary}
+                isGeneratingSummary={isGeneratingSummary}
+              />
+            </div>
+          </div>
 
         )}
       </main>
