@@ -1,0 +1,78 @@
+# Environment Variables
+.env
+.env.local
+
+# Python Virtual Environments
+.image_env/
+venv/
+.venv/
+
+# Node Modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Next.js Build Files
+.next/
+out/
+build/
+dist/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Python Cache and Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# PyTorch and ML Model Cache
+.cache/
+*.pth
+*.pkl
+
+# Backend Outputs (your 3D models and generated files)
+backend/outputs/
+backend/models/
+backend/depth/
+backend/pointcloud/
+
+# Logs
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# OS Files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary Files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Package Lock Files (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+
+# Misc
+.vercel
+.turbo
