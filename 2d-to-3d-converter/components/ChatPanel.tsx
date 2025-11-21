@@ -12,9 +12,13 @@ interface ChatPanelProps {
   imageName: string;
   summary: string;
   isGeneratingSummary: boolean;
+  imageMetadata?: {
+    uniqueName?: string;
+    originalImagePath?: string;
+  };
 }
 
-export default function ChatPanel({ imageName, summary, isGeneratingSummary }: ChatPanelProps) {
+export default function ChatPanel({ imageName, summary, isGeneratingSummary,imageMetadata }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +79,8 @@ export default function ChatPanel({ imageName, summary, isGeneratingSummary }: C
           image_name: imageName,
           summary: summary,
           conversation_history: messages,
+          unique_name: imageMetadata?.uniqueName,
+          original_image_path: imageMetadata?.originalImagePath
         }),
       });
 

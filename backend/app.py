@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Optional
 import io
 import os
 import cv2
@@ -15,6 +15,8 @@ from PIL import Image
 import trimesh
 import time
 import uuid
+import shutil
+import glob
 
 # Import your services
 try:
@@ -46,6 +48,7 @@ OUTPUT_DIR = Path("outputs")
 MODELS_DIR = OUTPUT_DIR / "models"
 DEPTH_DIR = OUTPUT_DIR / "depth"
 POINTCLOUD_DIR = OUTPUT_DIR / "pointcloud"
+UPLOADED_DIR = OUTPUT_DIR / "uploaded" 
 
 for dir_path in [OUTPUT_DIR, MODELS_DIR, DEPTH_DIR, POINTCLOUD_DIR]:
     dir_path.mkdir(exist_ok=True)
@@ -242,6 +245,8 @@ class ReportRequest(BaseModel):
     image_name: str
     summary: str
     conversation_history: List[Dict[str, str]]
+    original_image_path: Optional[str] = None  # NEW: Optional image path
+    unique_name: Optional[str] = None  # NEW: For file lookup
 
 # Root endpoint
 @app.get("/")
@@ -260,9 +265,7 @@ async def health_check():
 # 3D Conversion Endpoint (Complete Implementation)
 @app.post("/api/convert")
 async def convert_image_to_3d(file: UploadFile = File(...)):
-    """
-    Convert 2D image to 3D model using MiDaS depth estimation
-    """
+    """Convert 2D image to 3D model using MiDaS depth estimation"""
     try:
         # Validate file type
         if not file.content_type.startswith('image/'):
@@ -280,11 +283,21 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         print(f"Processing image: {file.filename}, shape: {img_rgb.shape}")
 
-        # Generate unique filename using timestamp and UUID for better uniqueness
+        # Generate unique filename
         base_name = Path(file.filename).stem
-        timestamp = int(time.time() * 1000)
-        unique_id = str(uuid.uuid4())[:8]
-        unique_name = f"{base_name}_{timestamp}_{unique_id}"
+        timestamp = int(time.time() * 1000)  # Use current timestamp for uniqueness
+        unique_name = f"{base_name}_{timestamp}"
+        
+        # Get file extension
+        file_extension = Path(file.filename).suffix.lower()
+        if not file_extension:
+            file_extension = '.jpg'  # Default extension
+
+        # SAVE ORIGINAL IMAGE FOR REPORT GENERATION (NEW)
+        original_image_path = UPLOADED_DIR / f"{unique_name}{file_extension}"
+        with open(original_image_path, 'wb') as f:
+            f.write(contents)
+        print(f"Original image saved to: {original_image_path}")
 
         # 1. Estimate depth map
         print("Estimating depth map...")
@@ -312,6 +325,8 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
             "model_url": f"http://localhost:8000/outputs/models/{mesh_path.name}",
             "depth_map_url": f"http://localhost:8000/outputs/depth/{depth_path.name}",
             "point_cloud_url": f"http://localhost:8000/outputs/pointcloud/{pointcloud_path.name}",
+            "original_image_path": str(original_image_path),  # NEW: Include for report generation
+            "unique_name": unique_name,  # NEW: For easier file lookup
             "format": "glb",
             "success": True,
             "message": "3D model generated successfully"
@@ -325,7 +340,8 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
-
+    
+    
 # Generate Summary Endpoint
 @app.post("/api/generate-summary")
 async def generate_summary(request: SummaryRequest):
@@ -374,17 +390,47 @@ async def chat(request: ChatRequest):
 # Export Report Endpoint
 @app.post("/api/export-report")
 async def export_report(request: ReportRequest):
-    """Export summary and conversation as a PDF report."""
+    """Export summary and conversation as a PDF report with original image."""
     try:
         if report_service:
+            image_path = None
+            
+            # Method 1: Use provided image path if available
+            if request.original_image_path and os.path.exists(request.original_image_path):
+                image_path = request.original_image_path
+            
+            # Method 2: Try to find image using unique_name
+            elif request.unique_name:
+                possible_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+                for ext in possible_extensions:
+                    potential_path = UPLOADED_DIR / f"{request.unique_name}{ext}"
+                    if potential_path.exists():
+                        image_path = str(potential_path)
+                        break
+            
+            # Method 3: Fallback - search by image_name
+            if not image_path:
+                possible_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+                for ext in possible_extensions:
+                    # Try with timestamp pattern
+                    pattern = f"{request.image_name}_*{ext}"
+                    matching_files = list(UPLOADED_DIR.glob(pattern))
+                    if matching_files:
+                        # Use the most recent file
+                        image_path = str(max(matching_files, key=os.path.getctime))
+                        break
+            
+            print(f"Using image path for report: {image_path}")
+            
+            # Generate PDF with image
             pdf_bytes = report_service.generate_conversation_report(
                 request.image_name,
                 request.summary,
-                request.conversation_history
+                request.conversation_history,
+                image_path  # Pass the image path
             )
             
             filename = f"learning_report_{request.image_name.replace(' ', '_')}.pdf"
-            
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),
                 media_type="application/pdf",
@@ -392,11 +438,13 @@ async def export_report(request: ReportRequest):
             )
         else:
             raise HTTPException(status_code=503, detail="Report service not available")
-    
+            
     except Exception as e:
         print(f"Error exporting report: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 # List all routes (for debugging)
 @app.get("/api/routes")
 async def list_routes():

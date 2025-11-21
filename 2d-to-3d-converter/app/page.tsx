@@ -21,6 +21,8 @@ interface ConvertedModel {
   depth_map_url: string;
   point_cloud_url?: string;
   format: string;
+  original_image_path?: string;
+  unique_name?: string;
 }
 
 type ViewMode = '3d-model' | 'textured' | 'point-cloud';
@@ -38,6 +40,10 @@ export default function Home() {
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string>('');
+  const [imageMetadata, setImageMetadata] = useState<{
+    uniqueName?: string;
+    originalImagePath?: string;
+  }>({});
 
   // Handle Image Upload and Processing
   const handleImageUpload = useCallback(async (file: File) => {
@@ -404,6 +410,7 @@ export default function Home() {
                 imageName={imageName}
                 summary={summary}
                 isGeneratingSummary={isGeneratingSummary}
+                imageMetadata={imageMetadata} 
               />
             </div>
           </div>
