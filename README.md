@@ -23,6 +23,7 @@ This project enables learners to upload an image and:
 ## Tech Stack
 
 ### Frontend
+- React/Next.js frontend uses the App Router pattern with TypeScript, integrating Three.js and React Three Fiber for 3D visualization. The UI is built with Tailwind CSS and Radix UI components, providing an interactive learning experience.
 - React.js with Next.js App Router
 - Three.js and React Three Fiber for 3D rendering
 - Tailwind CSS for styling
@@ -30,6 +31,8 @@ This project enables learners to upload an image and:
 - Radix UI components
 
 ### Backend
+
+- FastAPI backend handles depth estimation using MiDaS (DPT_Large) via PyTorch Hub, with automatic GPU/CPU detection. The system generates three key outputs: depth maps (PNG), 3D meshes (GLB via Trimesh), and point clouds (PLY). The backend also includes AI-assisted learning features with image summary generation and chat endpoints for Q&A interactions
 - Python with FastAPI
 - PyTorch for ML models
 - MiDaS for depth estimation
