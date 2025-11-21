@@ -13,6 +13,8 @@ from pathlib import Path
 import base64
 from PIL import Image
 import trimesh
+import time
+import uuid
 
 # Import your services
 try:
@@ -60,7 +62,6 @@ async def add_cors_headers(request, call_next):
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
-
 # Global variable to cache the MiDaS model
 midas_model = None
 midas_transform = None
@@ -100,14 +101,14 @@ def estimate_depth(image_rgb):
     # Predict depth
     with torch.no_grad():
         prediction = model(input_batch)
-        
-        # Resize to original resolution
-        prediction = torch.nn.functional.interpolate(
-            prediction.unsqueeze(1),
-            size=image_rgb.shape[:2],
-            mode="bicubic",
-            align_corners=False,
-        ).squeeze()
+    
+    # Resize to original resolution
+    prediction = torch.nn.functional.interpolate(
+        prediction.unsqueeze(1),
+        size=image_rgb.shape[:2],
+        mode="bicubic",
+        align_corners=False,
+    ).squeeze()
     
     depth_map = prediction.cpu().numpy()
     
@@ -130,21 +131,26 @@ def create_3d_mesh(image_rgb, depth_map, output_path):
 
     # Flip Y to convert to a Y-up world (renderer) convention
     y_world = (h - 1) - y_grid
+    
+    # Center the coordinates around origin
+    x_centered = x_grid - (w - 1) / 2.0
+    y_centered = y_world - (h - 1) / 2.0
 
     # Flatten arrays
-    x_flat = x_grid.flatten()
-    y_flat = y_world.flatten()
+    x_flat = x_centered.flatten()
+    y_flat = y_centered.flatten()
     z_flat = depth_map.flatten()
 
-    # Scale depth for better visualization
+    # Scale depth for better visualization and center Z around 0
     z_scaled = z_flat * 100.0
+    z_centered = z_scaled - np.mean(z_scaled)  # Center depth around 0
     
     # Create front surface vertices
-    front_vertices = np.column_stack([x_flat, y_flat, z_scaled])
+    front_vertices = np.column_stack([x_flat, y_flat, z_centered])
     
     # Create back surface vertices (slightly behind front surface)
     back_offset = 2.0  # Small thickness to avoid z-fighting
-    back_vertices = np.column_stack([x_flat, y_flat, z_scaled - back_offset])
+    back_vertices = np.column_stack([x_flat, y_flat, z_centered - back_offset])
     
     # Combine all vertices
     vertices = np.vstack([front_vertices, back_vertices])
@@ -200,12 +206,20 @@ def create_point_cloud(image_rgb, depth_map, output_path):
 
     # Flip Y for Y-up convention
     y_world = (h - 1) - y_grid
+    
+    # Center the coordinates around origin
+    x_centered = x_grid - (w - 1) / 2.0
+    y_centered = y_world - (h - 1) / 2.0
+    
+    # Scale and center depth
+    z_scaled = depth_map * 100.0
+    z_centered = z_scaled - np.mean(z_scaled)
 
-    # Points: [X, Y, Z]
+    # Points: [X, Y, Z] - all centered around origin
     points = np.column_stack([
-        x_grid.flatten(),
-        y_world.flatten(),          # flipped Y
-        depth_map.flatten() * 100.0
+        x_centered.flatten(),
+        y_centered.flatten(),
+        z_centered.flatten()
     ])
 
     colors = image_rgb.reshape(-1, 3)
@@ -253,7 +267,7 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
         # Validate file type
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
-        
+
         # Read and decode image
         contents = await file.read()
         nparr = np.frombuffer(contents, np.uint8)
@@ -261,38 +275,38 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
         
         if img_bgr is None:
             raise HTTPException(status_code=400, detail="Invalid image file")
-        
+
         # Convert BGR to RGB
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        
         print(f"Processing image: {file.filename}, shape: {img_rgb.shape}")
-        
-        # Generate unique filename
+
+        # Generate unique filename using timestamp and UUID for better uniqueness
         base_name = Path(file.filename).stem
-        timestamp = int(os.path.getmtime(__file__) * 1000) if os.path.exists(__file__) else 0
-        unique_name = f"{base_name}_{timestamp}"
-        
+        timestamp = int(time.time() * 1000)
+        unique_id = str(uuid.uuid4())[:8]
+        unique_name = f"{base_name}_{timestamp}_{unique_id}"
+
         # 1. Estimate depth map
         print("Estimating depth map...")
         depth_normalized, depth_image = estimate_depth(img_rgb)
-        
+
         # Save depth map
         depth_path = DEPTH_DIR / f"{unique_name}_depth.png"
         cv2.imwrite(str(depth_path), depth_image)
         print(f"Depth map saved to: {depth_path}")
-        
+
         # 2. Create 3D mesh (GLB format)
         print("Creating 3D mesh...")
         mesh_path = MODELS_DIR / f"{unique_name}.glb"
         create_3d_mesh(img_rgb, depth_normalized, mesh_path)
         print(f"3D mesh saved to: {mesh_path}")
-        
+
         # 3. Create point cloud
         print("Creating point cloud...")
         pointcloud_path = POINTCLOUD_DIR / f"{unique_name}.ply"
         create_point_cloud(img_rgb, depth_normalized, pointcloud_path)
         print(f"Point cloud saved to: {pointcloud_path}")
-        
+
         # Return URLs to the generated files
         response_data = {
             "model_url": f"http://localhost:8000/outputs/models/{mesh_path.name}",
@@ -302,10 +316,10 @@ async def convert_image_to_3d(file: UploadFile = File(...)):
             "success": True,
             "message": "3D model generated successfully"
         }
-        
+
         print("Conversion completed successfully!")
         return JSONResponse(content=response_data)
-        
+
     except Exception as e:
         print(f"Error in conversion: {str(e)}")
         import traceback
@@ -319,13 +333,14 @@ async def generate_summary(request: SummaryRequest):
     try:
         if openrouter_service:
             summary = openrouter_service.generate_image_summary(
-                request.image_name, 
+                request.image_name,
                 request.image_type
             )
         else:
             summary = f"This is an educational overview of {request.image_name}. The 3D model allows you to explore the structure and features in detail."
         
         return JSONResponse(content={"summary": summary})
+    
     except Exception as e:
         print(f"Error generating summary: {str(e)}")
         return JSONResponse(
@@ -348,6 +363,7 @@ async def chat(request: ChatRequest):
             response = f"I'm here to help you learn about {request.image_name}. Unfortunately, the AI chat service is not configured yet."
         
         return JSONResponse(content={"response": response})
+    
     except Exception as e:
         print(f"Error in chat: {str(e)}")
         return JSONResponse(
@@ -376,6 +392,7 @@ async def export_report(request: ReportRequest):
             )
         else:
             raise HTTPException(status_code=503, detail="Report service not available")
+    
     except Exception as e:
         print(f"Error exporting report: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

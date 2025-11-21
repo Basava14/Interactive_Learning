@@ -138,32 +138,37 @@ export default function ChatPanel({ imageName, summary, isGeneratingSummary }: C
         </div>
       </div>
 
-      {/* Summary Section with Gradient Background */}
-      <div className="px-6 py-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-b border-indigo-100/50 flex-shrink-0 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-6 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full"></div>
-          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
-            Summary
-          </h3>
+      {/* Summary Section with Scrollable Content - FIXED */}
+      <div className="border-b border-indigo-100/50 flex-shrink-0 shadow-sm" style={{ height: '220px' }}>
+        <div className="px-6 py-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 h-full">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1 h-6 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full"></div>
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
+              Summary
+            </h3>
+          </div>
+          {isGeneratingSummary ? (
+            <div className="flex items-center gap-3 text-blue-600 bg-white/60 backdrop-blur-sm p-4 rounded-xl border border-blue-200/50">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm font-medium">Generating AI-powered summary...</span>
+            </div>
+          ) : (
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-indigo-200/50 shadow-sm" style={{ height: 'calc(100% - 25px)' }}>
+              <div className="p-4 h-full overflow-y-auto">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {summary || 'No summary available yet.'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
-        {isGeneratingSummary ? (
-          <div className="flex items-center gap-3 text-blue-600 bg-white/60 backdrop-blur-sm p-4 rounded-xl border border-blue-200/50">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm font-medium">Generating AI-powered summary...</span>
-          </div>
-        ) : (
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-indigo-200/50 shadow-sm">
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {summary || 'No summary available yet.'}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat Messages - Fixed height calculation */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-5 space-y-4 min-h-0 bg-gradient-to-b from-transparent to-gray-50/30"
+        className="overflow-y-auto px-6 py-5 space-y-4 bg-gradient-to-b from-transparent to-gray-50/30"
+        style={{ height: 'calc(100vh - 12rem - 100px - 200px - 120px)' }}
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -229,7 +234,7 @@ export default function ChatPanel({ imageName, summary, isGeneratingSummary }: C
       </div>
 
       {/* Input Area with Modern Design */}
-      <div className="px-6 py-5 border-t border-gray-200/50 bg-gradient-to-r from-gray-50 to-white flex-shrink-0 shadow-lg">
+      <div className="px-6 py-5 border-t border-gray-200/50 bg-gradient-to-r from-gray-50 to-white flex-shrink-0 shadow-lg" style={{ height: '120px' }}>
         <div className="flex gap-3">
           <div className="flex-1 relative">
             <input
