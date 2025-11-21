@@ -98,3 +98,8 @@ This project enables learners to upload an image and:
    ```
    The frontend will be available at `http://localhost:3000`
 
+### Demo Image :
+
+<img width="910" height="410" alt="image" src="https://github.com/user-attachments/assets/36ccf6e8-195f-4bd9-ae47-d23b7f5ae598" />
+
+
