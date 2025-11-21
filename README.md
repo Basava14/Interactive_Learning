@@ -66,6 +66,7 @@ This project enables learners to upload an image and:
 
 3. **Install Python dependencies**
    ```bash
+   cd backend
    pip install -r req_full.txt
    ```
 4. **Install Python dependencies**
