@@ -120,75 +120,98 @@ def estimate_depth(image_rgb):
     return depth_normalized, depth_image
 
 def create_3d_mesh(image_rgb, depth_map, output_path):
-    """
-    Create 3D mesh from RGB image and depth map using trimesh
-    """
+    """ Create 3D mesh from RGB image and depth map using trimesh """
     h, w = depth_map.shape
-    
-    # Create vertex grid
-    x = np.linspace(0, w-1, w)
-    y = np.linspace(0, h-1, h)
+
+    # Create vertex grid (image space: x rightwards, y downwards)
+    x = np.linspace(0, w - 1, w)
+    y = np.linspace(0, h - 1, h)
     x_grid, y_grid = np.meshgrid(x, y)
-    
+
+    # Flip Y to convert to a Y-up world (renderer) convention
+    y_world = (h - 1) - y_grid
+
     # Flatten arrays
     x_flat = x_grid.flatten()
-    y_flat = y_grid.flatten()
+    y_flat = y_world.flatten()
     z_flat = depth_map.flatten()
+
+    # Scale depth for better visualization
+    z_scaled = z_flat * 100.0
     
-    # Create vertices (scale depth for better visualization)
-    vertices = np.column_stack([x_flat, y_flat, z_flat * 100])
+    # Create front surface vertices
+    front_vertices = np.column_stack([x_flat, y_flat, z_scaled])
     
-    # Create faces using triangulation
+    # Create back surface vertices (slightly behind front surface)
+    back_offset = 2.0  # Small thickness to avoid z-fighting
+    back_vertices = np.column_stack([x_flat, y_flat, z_scaled - back_offset])
+    
+    # Combine all vertices
+    vertices = np.vstack([front_vertices, back_vertices])
+    
+    # Create vertex colors (duplicate for front and back)
+    colors = image_rgb.reshape(-1, 3)
+    all_colors = np.vstack([colors, colors])
+
+    # Create faces with proper winding order
     faces = []
+    
+    # Front faces (counter-clockwise when viewed from front)
     for i in range(h - 1):
         for j in range(w - 1):
-            # Create two triangles for each quad
             idx = i * w + j
-            # Triangle 1
+            # Triangle 1: top-left, bottom-left, top-right
+            faces.append([idx, idx + w, idx + 1])
+            # Triangle 2: top-right, bottom-left, bottom-right  
+            faces.append([idx + 1, idx + w, idx + w + 1])
+    
+    # Back faces (clockwise when viewed from front = counter-clockwise from back)
+    vertex_offset = h * w  # Offset to back vertices
+    for i in range(h - 1):
+        for j in range(w - 1):
+            idx = i * w + j + vertex_offset
+            # Triangle 1: top-left, top-right, bottom-left (reversed winding)
             faces.append([idx, idx + 1, idx + w])
-            # Triangle 2
+            # Triangle 2: top-right, bottom-right, bottom-left (reversed winding)
             faces.append([idx + 1, idx + w + 1, idx + w])
-    
+
     faces = np.array(faces)
-    
-    # Create vertex colors from image
-    colors = image_rgb.reshape(-1, 3)
-    
+
     # Create mesh
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=all_colors)
+    
+    # Ensure proper normals
+    mesh.fix_normals()
+    
+    # Remove any degenerate faces
+    mesh.remove_degenerate_faces()
     
     # Export mesh
     mesh.export(output_path)
-    
     return str(output_path)
 
 def create_point_cloud(image_rgb, depth_map, output_path):
-    """
-    Create 3D point cloud from RGB image and depth map
-    """
+    """ Create 3D point cloud from RGB image and depth map """
     h, w = depth_map.shape
-    
-    # Create point cloud
-    x = np.linspace(0, w-1, w)
-    y = np.linspace(0, h-1, h)
+
+    x = np.linspace(0, w - 1, w)
+    y = np.linspace(0, h - 1, h)
     x_grid, y_grid = np.meshgrid(x, y)
-    
-    # Flatten and create points
+
+    # Flip Y for Y-up convention
+    y_world = (h - 1) - y_grid
+
+    # Points: [X, Y, Z]
     points = np.column_stack([
         x_grid.flatten(),
-        y_grid.flatten(),
-        depth_map.flatten() * 100
+        y_world.flatten(),          # flipped Y
+        depth_map.flatten() * 100.0
     ])
-    
-    # Get colors from image
+
     colors = image_rgb.reshape(-1, 3)
-    
-    # Create point cloud using trimesh
+
     point_cloud = trimesh.points.PointCloud(vertices=points, colors=colors)
-    
-    # Export as PLY
     point_cloud.export(output_path)
-    
     return str(output_path)
 
 # Pydantic models

@@ -331,7 +331,7 @@ def create_llm_service(provider: str = "auto") -> LLMService:
     return LLMService(provider=provider)
 
 # Singleton instances for backward compatibility
-llm_service = create_llm_service("auto")  # Auto-select best available
+llm_service = create_llm_service("openrouter")  # Auto-select best available
 openrouter_service = llm_service  # Backward compatibility alias
 
 
