@@ -74,7 +74,7 @@ This project enables learners to upload an image and:
 5. **Start the backend server**
    ```
    cd backend
-   python run.py
+   python app.py
    ```
    The backend API will be available at `http://localhost:8000`
 
